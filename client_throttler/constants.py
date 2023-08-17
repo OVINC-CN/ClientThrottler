@@ -35,8 +35,6 @@ CACHE_KEY_TIMEOUT = timedelta(hours=1)
 
 class Defaults:
     rate = "100/s"
-    key_prefix = ""
-    key = ""
     enable_sleep_wait = True
     unit_value = 1
 
@@ -80,3 +78,6 @@ class TimeDurationUnit(Enum):
 class Unset:
     def __bool__(self):
         return False
+
+    def __str__(self):
+        return ""
