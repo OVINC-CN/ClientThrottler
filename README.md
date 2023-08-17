@@ -22,37 +22,31 @@ $ pip install client_throttler
 
 ### Usage
 
-1. [Option] Configure a default Redis client for all Throttler rate limiters.
+1. [Optional] Configure a default Redis client for all Throttler rate limiters.
 
     ```python
-    # -*- coding: utf-8 -*-
-
     from redis.client import Redis
+    from client_throttler import setup, ThrottlerConfig
     
-    from client_throttler import setup
-    
-    configure(Redis(host="localhost", port=1234, db=1))
+    setup(ThrottlerConfig(redis_client=Redis(host="localhost", port=1234, db=1)))
     ```
 
 2. Simply add a decorator to the function or method that needs to have its calls limited.
 
     ```python
-    # -*- coding: utf-8 -*-
-    
     from redis.client import Redis
-    
-    from client_throttler.throttler import throttler, ThrottlerConfig
+    from client_throttler import throttler, ThrottlerConfig
     
     redis_client = Redis(host="localhost", port=1234, db=2)
     
     # use default redis client
     @throttler(ThrottlerConfig(rate="1/2s"))
-    def funcA(*args, **kwargs):
+    def func_a(*args, **kwargs):
         return args, kwargs
     
     # use customized redis client
     @throttler(ThrottlerConfig(rate="1/2s", redis_client=redis_client))
-    def funcB(*args, **kwargs):
+    def func_b(*args, **kwargs):
         return args, kwargs
     ```
 
