@@ -58,4 +58,4 @@ class TestParseRate(unittest.TestCase):
         for rate_str in invalid_rate_strings:
             with self.subTest(rate_str=rate_str):
                 with self.assertRaises(RateParseError):
-                    ThrottlerConfig(rate=rate_str)
+                    _ = ThrottlerConfig(rate=rate_str).interval
