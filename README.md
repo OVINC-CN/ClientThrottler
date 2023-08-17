@@ -52,4 +52,4 @@ $ pip install client_throttler
 
 ## License
 
-Based on the MIT protocol. Please refer to [LICENSE](https://github.com/OVINC-CN/ClientThrottler/blob/main/LICENSE)
+Based on the MIT protocol. Please refer to [LICENSE](./LICENSE)
