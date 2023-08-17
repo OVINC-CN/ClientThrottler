@@ -33,6 +33,7 @@ from client_throttler.constants import (
     RATE_PATTERN,
     Defaults,
     TimeDurationUnit,
+    Unset,
 )
 from client_throttler.exceptions import RateParseError
 
@@ -50,34 +51,48 @@ class ThrottlerConfig:
     :param max_retry_times: Max retry time of request
     :param max_retry_duration: Max retry duration of request (seconds)
     :param redis_client: Redis Client
+    :param func: function that needs throttle, no need when using decorator
     """
 
-    # user params
-    rate: str = Defaults.rate
-    key_prefix: str = ""
-    key: Union[callable, str] = None
-    enable_sleep_wait: bool = True
-    max_retry_times: int = None
-    max_retry_duration: float = None
-    redis_client: Redis = None
+    rate: str = Unset()
+    key_prefix: str = Unset()
+    key: Union[callable, str] = Unset()
+    enable_sleep_wait: bool = Unset()
+    max_retry_times: int = Unset()
+    max_retry_duration: float = Unset()
+    redis_client: Redis = Unset()
+    func: callable = Unset()
 
-    # auto registry
-    func: callable = None
-    max_requests: int = int()
-    interval: float = float()
-
-    def __post_init__(self):
-        self.max_requests, self.interval = self.parse_rate(self.rate)
+    _max_requests: int = Unset()
+    _interval: float = Unset()
+    _cache_key: str = Unset()
 
     @property
     def cache_key(self) -> str:
+        if self._cache_key:
+            return self._cache_key
         if callable(self.key):
             key = self.key()
         elif self.key:
             key = self.key
         else:
             key = f"{self.func.__module__}.{self.func.__qualname__}"
-        return CACHE_KEY_FORMAT.format(f"{self.key_prefix}:{key}")
+        self._cache_key = CACHE_KEY_FORMAT.format(f"{self.key_prefix}:{key}")
+        return self._cache_key
+
+    @property
+    def max_requests(self) -> int:
+        if self._max_requests:
+            return self._max_requests
+        self._max_requests = self.parse_rate(self.rate)[0]
+        return self._max_requests
+
+    @property
+    def interval(self) -> float:
+        if self._interval:
+            return self._interval
+        self._interval = self.parse_rate(self.rate)[1]
+        return self._interval
 
     def parse_rate(self, rate: str) -> Tuple[int, float]:
         """
@@ -98,6 +113,35 @@ class ThrottlerConfig:
             raise RateParseError(rate)
         return max_requests, value * unit
 
+    def mix_config(
+        self, config: "ThrottlerConfig" = None, replace: bool = False
+    ) -> None:
+        """
+        mix default config with custom config
+        """
+
+        # if config not set, use default config
+        if not config:
+            if "default_config" in globals():
+                global default_config
+                config = default_config
+            else:
+                return
+
+        # replace None with default value
+        for key, val in self.__dict__.items():
+            # skip inner config
+            if key.startswith("_"):
+                continue
+            # skip already configured and not force replace
+            if not isinstance(val, Unset) and not replace:
+                continue
+            # skip unset default value
+            default_val = getattr(config, key, None)
+            if isinstance(default_val, Unset):
+                continue
+            setattr(self, key, default_val)
+
 
 def setup(config: ThrottlerConfig):
     """
@@ -105,7 +149,12 @@ def setup(config: ThrottlerConfig):
     """
 
     global default_config
-    default_config = config
+    default_config.mix_config(config=config, replace=True)
 
 
-default_config = ThrottlerConfig()
+default_config = ThrottlerConfig(
+    rate=Defaults.rate,
+    key_prefix=Defaults.key_prefix,
+    key=Defaults.key,
+    enable_sleep_wait=Defaults.enable_sleep_wait,
+)

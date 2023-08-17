@@ -28,7 +28,7 @@ from functools import wraps
 from client_throttler.throttler import Throttler, ThrottlerConfig
 
 
-def throttler(config: ThrottlerConfig):
+def throttler(config: ThrottlerConfig = None):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -37,4 +37,5 @@ def throttler(config: ThrottlerConfig):
 
         return wrapper
 
+    config = config or ThrottlerConfig()
     return decorator

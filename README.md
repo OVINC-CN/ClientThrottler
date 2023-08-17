@@ -35,19 +35,30 @@ $ pip install client_throttler
 
     ```python
     from redis.client import Redis
-    from client_throttler import throttler, ThrottlerConfig
+    from client_throttler import throttler, ThrottlerConfig, Throttler
     
     redis_client = Redis(host="localhost", port=1234, db=2)
     
-    # use default redis client
-    @throttler(ThrottlerConfig(rate="1/2s"))
+    # use default config
+    @throttler()
     def func_a(*args, **kwargs):
         return args, kwargs
-    
-    # use customized redis client
-    @throttler(ThrottlerConfig(rate="1/2s", redis_client=redis_client))
+   
+    # use default config, and change custom config
+    @throttler(ThrottlerConfig(rate="1/2s"))
     def func_b(*args, **kwargs):
         return args, kwargs
+    
+    # use default config, and change redis client and some custom config
+    @throttler(ThrottlerConfig(rate="1/2s", redis_client=redis_client))
+    def func_c(*args, **kwargs):
+        return args, kwargs
+   
+    # change a callable into throttled callable
+    def func_d(*args, **kwargs):
+        return args, kwargs
+    func = Throttler(ThrottlerConfig(func=func_d))
+    func(*args, **kwargs)
     ```
 
 ## License

@@ -41,8 +41,9 @@ class Throttler:
     Previous request information used for throttling is stored in the cache.
     """
 
-    def __init__(self, config: ThrottlerConfig):
-        self.config = config
+    def __init__(self, config: ThrottlerConfig = None):
+        self.config = config or default_config
+        self.config.mix_config()
         # check redis status
         if not self.config.redis_client:
             self.config.redis_client = default_config.redis_client
@@ -126,16 +127,13 @@ class Throttler:
             return 0
 
     def check_retry_times(self, tag: str, retry_times: int) -> None:
-        if (
-            self.config.max_retry_times is not None
-            and retry_times > self.config.max_retry_times
-        ):
+        if self.config.max_retry_times and retry_times > self.config.max_retry_times:
             raise TooManyRetries(tag, retry_times)
 
     def check_retry_duration(
         self, tag: str, start_time: float, wait_time: float
     ) -> None:
-        if self.config.max_retry_duration is not None:
+        if self.config.max_retry_duration:
             expect_time = start_time + self.config.max_retry_duration
             actual_time = time.time() + wait_time
             if actual_time > expect_time:

@@ -34,7 +34,10 @@ CACHE_KEY_TIMEOUT = timedelta(hours=1)
 
 
 class Defaults:
-    rate = "1/s"
+    rate = "100/s"
+    key_prefix = ""
+    key = ""
+    enable_sleep_wait = True
     unit_value = 1
 
 
@@ -72,3 +75,8 @@ class TimeDurationUnit(Enum):
             if unit.name == unit_name:
                 return unit.value
         raise ValueError(f"Invalid unit name: {unit_name}")
+
+
+class Unset:
+    def __bool__(self):
+        return False
