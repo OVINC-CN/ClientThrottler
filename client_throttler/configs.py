@@ -109,12 +109,10 @@ class ThrottlerConfig:
         """
 
         # if config not set, use default config
-        if not config:
-            if "default_config" in globals():
-                global default_config
-                config = default_config
-            else:
-                return
+        if not config and "default_config" not in globals():
+            return
+
+        config = config or default_config
 
         # replace None with default value
         for key, val in self.__dict__.items():
