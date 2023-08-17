@@ -24,6 +24,7 @@ SOFTWARE.
 """
 
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Tuple, Union
 
 from redis import Redis
@@ -63,36 +64,23 @@ class ThrottlerConfig:
     redis_client: Redis = Unset()
     func: callable = Unset()
 
-    _max_requests: int = Unset()
-    _interval: float = Unset()
-    _cache_key: str = Unset()
-
-    @property
+    @cached_property
     def cache_key(self) -> str:
-        if self._cache_key:
-            return self._cache_key
         if callable(self.key):
             key = self.key()
         elif self.key:
             key = self.key
         else:
             key = f"{self.func.__module__}.{self.func.__qualname__}"
-        self._cache_key = CACHE_KEY_FORMAT.format(f"{self.key_prefix}:{key}")
-        return self._cache_key
+        return CACHE_KEY_FORMAT.format(f"{self.key_prefix}:{key}")
 
-    @property
+    @cached_property
     def max_requests(self) -> int:
-        if self._max_requests:
-            return self._max_requests
-        self._max_requests = self.parse_rate(self.rate)[0]
-        return self._max_requests
+        return self.parse_rate(self.rate)[0]
 
-    @property
+    @cached_property
     def interval(self) -> float:
-        if self._interval:
-            return self._interval
-        self._interval = self.parse_rate(self.rate)[1]
-        return self._interval
+        return self.parse_rate(self.rate)[1]
 
     def parse_rate(self, rate: str) -> Tuple[int, float]:
         """
