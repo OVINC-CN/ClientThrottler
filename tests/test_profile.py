@@ -23,10 +23,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import unittest
 
-def request_api() -> None:
-    return
+from pyinstrument import Profiler
+
+from client_throttler import Throttler, ThrottlerConfig
+from tests.mock.api import benchmark_api
+from tests.mock.redis import redis_client
 
 
-def benchmark_api() -> None:
-    return
+class ProfileTest(unittest.TestCase):
+    def test_profile(self):
+        # init
+        func = Throttler(
+            ThrottlerConfig(
+                func=benchmark_api, rate="5000/s", redis_client=redis_client, enable_metric_record=False
+            )
+        )
+        # analyze
+        profiler = Profiler()
+        profiler.start()
+        for _ in range(10000):
+            func()
+        profiler.stop()
+        print(profiler.output_text(unicode=False, color=True))
