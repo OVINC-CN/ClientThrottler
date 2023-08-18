@@ -37,7 +37,10 @@ class ProfileTest(unittest.TestCase):
         # init
         func = Throttler(
             ThrottlerConfig(
-                func=benchmark_api, rate="5000/s", redis_client=redis_client, enable_metric_record=False
+                func=benchmark_api,
+                rate="5000/s",
+                redis_client=redis_client,
+                enable_metric_record=False,
             )
         )
         # analyze
@@ -46,4 +49,4 @@ class ProfileTest(unittest.TestCase):
         for _ in range(10000):
             func()
         profiler.stop()
-        print(profiler.output_text(unicode=False, color=True))
+        profiler.print()
