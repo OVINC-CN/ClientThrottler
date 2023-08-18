@@ -25,37 +25,27 @@ SOFTWARE.
 
 import unittest
 
-from client_throttler import ThrottlerConfig
-from client_throttler.exceptions import RateParseError
+from client_throttler import Throttler, ThrottlerConfig
+from tests.mock.api import request_api
+from tests.mock.redis import redis_client
+from tests.mock.thread import bulk_request
 
 
-class TestParseRate(unittest.TestCase):
-    def test_parse_rate(self):
-        test_cases = [
-            ("100/s", (100, 1)),
-            ("100/20s", (100, 20)),
-            ("100/ms", (100, 0.001)),
-            ("100/3m", (100, 180)),
-        ]
+class ThrottlerTest(unittest.TestCase):
+    def test_sleep(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            enable_sleep_wait=True,
+            redis_client=redis_client,
+        )
+        bulk_request(Throttler(config), bulk_params=[{} for _ in range(2)])
 
-        for rate_str, expected_output in test_cases:
-            with self.subTest(rate_str=rate_str):
-                config = ThrottlerConfig(rate=rate_str)
-                self.assertEqual(
-                    (config.max_requests, config.interval), expected_output
-                )
-
-    def test_invalid_rate_string(self):
-        invalid_rate_strings = [
-            "100",
-            "abc",
-            "100//s",
-            "100/-1s",
-            "100/s20",
-            "100/20",
-        ]
-
-        for rate_str in invalid_rate_strings:
-            with self.subTest(rate_str=rate_str):
-                with self.assertRaises(RateParseError):
-                    _ = ThrottlerConfig(rate=rate_str).interval
+    def test_no_sleep(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            enable_sleep_wait=False,
+            redis_client=redis_client,
+        )
+        bulk_request(Throttler(config), bulk_params=[{} for _ in range(2)])

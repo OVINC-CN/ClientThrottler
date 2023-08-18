@@ -116,9 +116,6 @@ class ThrottlerConfig:
 
         # replace None with default value
         for key, val in self.__dict__.items():
-            # skip inner config
-            if key.startswith("_"):
-                continue
             # skip already configured and not force replace
             if not isinstance(val, Unset) and not replace:
                 continue
