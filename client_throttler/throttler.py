@@ -44,9 +44,6 @@ class Throttler:
     def __init__(self, config: ThrottlerConfig = None):
         self.config = config or default_config
         self.config.mix_config()
-        # check redis status
-        if not self.config.redis_client:
-            self.config.redis_client = default_config.redis_client
         self._check_redis()
 
     def get_request_count(self, start_time: float, tag: str, now: float) -> int:
@@ -160,9 +157,8 @@ class Throttler:
                 continue
             raise TooManyRequests()
 
-    def _reset(self) -> None:
+    def reset(self) -> None:
         """
-        For Test
         Clean up the keys stored in Redis.
         """
 
@@ -173,11 +169,9 @@ class Throttler:
         Check redis
         """
 
-        try:
-            if not self.config.redis_client.ping():
-                raise ConnectionError()
-        except Exception:
-            raise ConnectionError
+        if self.config.redis_client.ping():
+            return
+        raise ConnectionError()
 
     def __call__(self, *args, **kwargs) -> any:
         tag = str(uuid.uuid1())
