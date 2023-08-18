@@ -26,11 +26,11 @@ SOFTWARE.
 import time
 import uuid
 
-from redis.exceptions import ConnectionError, RedisError
+from redis.exceptions import ConnectionError
 
 from client_throttler.configs import ThrottlerConfig, default_config
 from client_throttler.constants import CACHE_KEY_TIMEOUT, TimeDurationUnit
-from client_throttler.exceptions import TooLongRetries, TooManyRequests, TooManyRetries
+from client_throttler.exceptions import RetryTimeout, TooManyRequests, TooManyRetries
 
 
 class Throttler:
@@ -137,7 +137,7 @@ class Throttler:
             expect_time = start_time + self.config.max_retry_duration
             actual_time = time.time() + wait_time
             if actual_time > expect_time:
-                raise TooLongRetries(tag, expect_time, actual_time)
+                raise RetryTimeout(tag, expect_time, actual_time)
 
     def wait(self, tag: str) -> None:
         """
@@ -181,10 +181,5 @@ class Throttler:
 
     def __call__(self, *args, **kwargs) -> any:
         tag = str(uuid.uuid1())
-        try:
-            self.wait(tag)
-            return self.config.func(*args, **kwargs)
-        except RedisError as err:
-            # Ensure the key is deleted if an error occurs during execution
-            self.config.redis_client.zrem(self.config.cache_key, tag)
-            raise err
+        self.wait(tag)
+        return self.config.func(*args, **kwargs)

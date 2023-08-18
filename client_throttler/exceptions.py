@@ -24,60 +24,67 @@ SOFTWARE.
 """
 
 
-class TooManyRequests(Exception):
-    """
-    Too many requests have reached the limit, and it is set not to delay the request through sleep
-    """
+class SDKException(Exception):
+    error_code = "sdk_exception"
+    error_message = "Unknown Error"
 
-    pass
+    def __init__(self, error_message=None, error_code=None, *args, **kwargs):
+        if error_message is not None:
+            self.error_message = error_message
+        if error_code is not None:
+            self.error_code = error_code
+
+    def __str__(self) -> str:
+        return f"[{self.error_code}] {self.error_message}"
 
 
-class TooManyRetries(Exception):
-    """
-    Too many retries have reached the limit.
+class TooManyRequests(SDKException):
+    error_code = "too_many_request"
+    error_message = "too many requests have reached the limit, and it is set not to delay the request through sleep"
 
-    Attributes:
-        tag -- request tag
-        times -- request times
-    """
 
-    def __init__(self, tag: str, times: int):
+class TooManyRetries(SDKException):
+    error_code = "too_many_retry"
+    error_message = (
+        "too many retries have reached the limit, tag: {tag}, times: {times}"
+    )
+
+    def __init__(self, tag, times, error_message=None, error_code=None):
+        super().__init__(error_message, error_code)
         self.tag = tag
         self.times = times
-        message = f"Too many retries have reached the limit, tag: {tag}, times: {times}"
-        super().__init__(message)
+        self.error_message = self.error_message.format(tag=tag, times=times)
 
 
-class TooLongRetries(Exception):
-    """
-    Too long retries have reached the limit.
+class RetryTimeout(SDKException):
+    error_code = "retry_timeout"
+    error_message = (
+        "retry duration have reached the limit, "
+        "tag: {tag}, expect_time: {expect_time}, actual_time: {actual_time}"
+    )
 
-    Attributes:
-        tag -- request tag
-        expect_time -- request expect maximum retry time
-        actual_time -- request actual retry time
-    """
-
-    def __init__(self, tag: str, expect_time: float, actual_time: float):
+    def __init__(
+        self,
+        tag: str,
+        expect_time: float,
+        actual_time: float,
+        error_message=None,
+        error_code=None,
+    ):
+        super().__init__(error_message, error_code)
+        self.tag = tag
         self.expect_time = expect_time
         self.actual_time = actual_time
-        message = (
-            f"Too long retries have reached the limit, tag: {tag}, "
-            f"expect_time: {expect_time}, actual_time: {actual_time}"
+        self.error_message = self.error_message.format(
+            tag=tag, expect_time=expect_time, actual_time=actual_time
         )
-        super().__init__(message)
 
 
-class RateParseError(Exception):
-    """
-    Rate parse error
+class RateParseError(SDKException):
+    error_code = "rate_parse_error"
+    error_message = "rate parse error, rate: {rate}"
 
-    Attributes:
-        expression -- input expression that caused the error
-        message -- explanation of the error
-    """
-
-    def __init__(self, rate: str):
+    def __init__(self, rate: str, error_message=None, error_code=None):
+        super().__init__(error_message, error_code)
         self.rate = rate
-        message = f"Rate parse error, rate: {rate}"
-        super().__init__(message)
+        self.error_message = self.error_message.format(rate=rate)

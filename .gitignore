@@ -10,6 +10,7 @@
 *.sh
 *.pyi
 *.log
+.coverage
 
 static/assets*
 venv
@@ -24,3 +25,8 @@ dist/
 *.egg**
 .tool-versions
 files.txt
+assets
+htmlcov
+htmltest
+coverage.xml
+result.xml

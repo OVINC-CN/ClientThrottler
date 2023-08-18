@@ -23,34 +23,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from setuptools import find_packages, setup
+import random
+import time
 
-with open("README.md") as f:
-    readme = f.read()
 
-with open("requirements.txt") as f:
-    requires = f.readlines()
-
-setup(
-    name="client_throttler",
-    version="1.0.2",
-    author="Raja",
-    url="https://www.ovinc.cn",
-    author_email="contact@ovinc.cn",
-    description="A client throttle tool based on redis.",
-    long_description=readme,
-    long_description_content_type="text/markdown",
-    packages=find_packages(include=["client_throttler"]),
-    classifiers=[
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Operating System :: OS Independent",
-        "License :: OSI Approved :: MIT License",
-    ],
-    python_requires=">=3.6, <4",
-    install_requires=requires,
-    license="MIT",
-)
+def request_api() -> None:
+    time.sleep(random.randrange(0, 50))
+    return
