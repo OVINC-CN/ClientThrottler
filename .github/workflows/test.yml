@@ -9,17 +9,16 @@ on:
 jobs:
   unittest:
     runs-on: ubuntu-20.04
-    services:
-      redis:
-        image: redis
-        ports:
-          - 6379:6379
     strategy:
       fail-fast: false
       matrix:
         python-version: [ "3.10" ]
     steps:
       - uses: actions/checkout@v3
+      - name: Setup redis
+        uses: supercharge/redis-github-action@1.6.0
+        with:
+          redis-version: 6
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v3
         with:
@@ -28,8 +27,5 @@ jobs:
         run: make dev
       - name: Test
         run: pytest --cov=client_throttler
-        env:
-          REDIS_HOST: redis
-          REDIS_PORT: 6379
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
