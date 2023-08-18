@@ -1,7 +1,7 @@
 # Client Throttler
 
 [![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://github.com/OVINC-CN/ClientThrottler/blob/main/LICENSE)
-[![Release Version](https://img.shields.io/badge/release-1.0.3-brightgreen.svg)](https://github.com/OVINC-CN/ClientThrottler/releases)
+[![Release Version](https://img.shields.io/badge/release-1.1.0-brightgreen.svg)](https://github.com/OVINC-CN/ClientThrottler/releases)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/OVINC-CN/ClientThrottler/pulls)
 [![Unittest](https://github.com/OVINC-CN/ClientThrottler/actions/workflows/test.yml/badge.svg)](https://github.com/OVINC-CN/ClientThrottler/actions/workflows/test.yml)
 [![codecov](https://codecov.io/github/OVINC-CN/ClientThrottler/graph/badge.svg?token=X3M2H1E59O)](https://codecov.io/github/OVINC-CN/ClientThrottler)
@@ -23,13 +23,13 @@ $ pip install client_throttler
 
 ### Usage
 
-1. [Optional] Configure a default Redis client for all Throttler rate limiters.
+1. [Optional] Configure a default config for all Throttler rate limiters.
 
     ```python
     from redis.client import Redis
     from client_throttler import setup, ThrottlerConfig
     
-    setup(ThrottlerConfig(redis_client=Redis(host="localhost", port=1234, db=1)))
+    setup(ThrottlerConfig(redis_client=Redis(host="localhost", port=1234, db=1), rate="100/s"))
     ```
 
 2. Simply add a decorator to the function or method that needs to have its calls limited.
@@ -60,6 +60,28 @@ $ pip install client_throttler
         return args, kwargs
     func = Throttler(ThrottlerConfig(func=func_d))
     func(*args, **kwargs)
+    ```
+   
+3. [Optinal] get metric data
+   
+    ```python
+    from redis.client import Redis
+    from client_throttler import MetricManager, ThrottlerConfig, Throttler
+   
+    redis_client = Redis(host="localhost", port=1234, db=2)
+    
+    def func_a(*args, **kwargs):
+        return args, kwargs
+    
+    # enable_metric_record=True should be set when collect metric
+    config = ThrottlerConfig(func=func_a, redis_client=redis_client, rate="100/s", enable_metric_record=True)
+    func = Throttler(config)
+    
+    """
+    call your func
+    """
+    
+    metrics = MetricManager(config).load_metrics()
     ```
 
 ## License

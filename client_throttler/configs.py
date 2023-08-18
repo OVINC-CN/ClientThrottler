@@ -31,6 +31,7 @@ from redis import Redis
 
 from client_throttler.constants import (
     CACHE_KEY_FORMAT,
+    METRIC_KEY_FORMAT,
     RATE_PATTERN,
     Defaults,
     TimeDurationUnit,
@@ -53,6 +54,7 @@ class ThrottlerConfig:
     :param max_retry_duration: Max retry duration of request (seconds)
     :param redis_client: Redis Client
     :param func: function that needs throttle, no need when using decorator
+    :param enable_metric_record: Whether to record request count in time series
     """
 
     rate: str = Unset()
@@ -63,16 +65,23 @@ class ThrottlerConfig:
     max_retry_duration: float = Unset()
     redis_client: Redis = Unset()
     func: callable = Unset()
+    enable_metric_record: bool = Unset()
 
     @cached_property
     def cache_key(self) -> str:
+        return CACHE_KEY_FORMAT.format(f"{self.key_prefix}:{self.redis_key}")
+
+    @cached_property
+    def metric_key(self) -> str:
+        return METRIC_KEY_FORMAT.format(f"{self.key_prefix}:{self.redis_key}")
+
+    @cached_property
+    def redis_key(self) -> str:
         if callable(self.key):
-            key = self.key()
-        elif self.key:
-            key = self.key
-        else:
-            key = f"{self.func.__module__}.{self.func.__qualname__}"
-        return CACHE_KEY_FORMAT.format(f"{self.key_prefix}:{key}")
+            return self.key()
+        if self.key:
+            return self.key
+        return f"{self.func.__module__}.{self.func.__qualname__}"
 
     @cached_property
     def max_requests(self) -> int:
@@ -88,7 +97,7 @@ class ThrottlerConfig:
         <max_requests>, <period in seconds>
         """
 
-        match = RATE_PATTERN.match(rate)
+        match = RATE_PATTERN.match(str(rate))
 
         if not match:
             raise RateParseError(rate)
@@ -136,6 +145,6 @@ def setup(config: ThrottlerConfig):
 
 
 default_config = ThrottlerConfig(
-    rate=Defaults.rate,
     enable_sleep_wait=Defaults.enable_sleep_wait,
+    enable_metric_record=Defaults.enable_metric_record,
 )

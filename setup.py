@@ -33,9 +33,9 @@ with open("requirements.txt") as f:
 
 setup(
     name="client_throttler",
-    version="1.0.3",
+    version="1.1.0",
     author="Raja",
-    url="https://www.ovinc.cn",
+    url="https://github.com/OVINC-CN/ClientThrottler",
     author_email="contact@ovinc.cn",
     description="A client throttle tool based on redis.",
     long_description=readme,

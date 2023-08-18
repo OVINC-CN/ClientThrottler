@@ -23,10 +23,38 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import unittest
 
-def request_api() -> None:
-    return
+from client_throttler import Throttler, ThrottlerConfig, setup
+from client_throttler.metrics import MetricManager
+from tests.mock.api import request_api
+from tests.mock.redis import redis_client
 
 
-def benchmark_api() -> None:
-    return
+class MetricsTest(unittest.TestCase):
+    def test_metric_collect(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            enable_metric_record=True,
+            redis_client=redis_client,
+        )
+        Throttler(config)()
+
+    def test_load_metric(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            enable_metric_record=True,
+            redis_client=redis_client,
+        )
+        Throttler(config)()
+        manager = MetricManager(config)
+        _ = manager.load_metrics()
+        manager.reset()
+
+        setup(config)
+        Throttler(config)()
+        manager = MetricManager()
+        manager.reset()
+        manager.reset()

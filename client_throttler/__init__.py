@@ -25,6 +25,7 @@ SOFTWARE.
 
 from client_throttler.configs import ThrottlerConfig, setup
 from client_throttler.decorators import throttler
+from client_throttler.metrics import MetricManager
 from client_throttler.throttler import Throttler
 
 __all__ = [
@@ -32,6 +33,7 @@ __all__ = [
     "throttler",
     "Throttler",
     "ThrottlerConfig",
+    "MetricManager",
 ]
 
-__version__ = "1.0.3"
+__version__ = "1.1.0"

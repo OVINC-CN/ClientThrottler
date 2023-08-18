@@ -120,6 +120,7 @@ class Throttler:
         if count > self.config.max_requests:
             return self.get_wait_time(start_time, now, tag)
         else:
+            self.record_metric(count)
             self.update_time(tag)
             return 0
 
@@ -172,6 +173,25 @@ class Throttler:
         if self.config.redis_client.ping():
             return
         raise ConnectionError()
+
+    def record_metric(self, count: int) -> None:
+        """
+        Record metric
+        """
+
+        if not self.config.enable_metric_record:
+            return
+
+        now = time.time()
+        with self.config.redis_client.pipeline(transaction=False) as pipe:
+            pipe.zremrangebyscore(
+                self.config.metric_key,
+                0,
+                now - CACHE_KEY_TIMEOUT.seconds,
+            )
+            pipe.zadd(self.config.metric_key, {f"{count}:{uuid.uuid1()}": time.time()})
+            pipe.expire(self.config.metric_key, CACHE_KEY_TIMEOUT)
+            pipe.execute(raise_on_error=False)
 
     def __call__(self, *args, **kwargs) -> any:
         tag = str(uuid.uuid1())

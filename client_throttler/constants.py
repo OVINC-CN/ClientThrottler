@@ -31,11 +31,13 @@ from types import DynamicClassAttribute
 RATE_PATTERN = re.compile(r"^(\d+)/(\d*)(\w+)$")
 CACHE_KEY_FORMAT = "client_throttler:{}"
 CACHE_KEY_TIMEOUT = timedelta(hours=1)
+METRIC_KEY_FORMAT = "client_throttler_metric:{}"
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 
 class Defaults:
-    rate = "100/s"
     enable_sleep_wait = True
+    enable_metric_record = False
     unit_value = 1
 
 
