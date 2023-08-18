@@ -23,10 +23,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import random
-import time
-
 
 def request_api() -> None:
-    time.sleep(random.randrange(0, 50))
     return

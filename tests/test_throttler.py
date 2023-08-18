@@ -25,10 +25,12 @@ SOFTWARE.
 
 import unittest
 
+from redis.exceptions import ConnectionError
+
 from client_throttler import Throttler, ThrottlerConfig
+from client_throttler.exceptions import RetryTimeout, TooManyRequests, TooManyRetries
 from tests.mock.api import request_api
-from tests.mock.redis import redis_client
-from tests.mock.thread import bulk_request
+from tests.mock.redis import fake_redis_client, redis_client
 
 
 class ThrottlerTest(unittest.TestCase):
@@ -39,7 +41,8 @@ class ThrottlerTest(unittest.TestCase):
             enable_sleep_wait=True,
             redis_client=redis_client,
         )
-        bulk_request(Throttler(config), bulk_params=[{} for _ in range(2)])
+        for _ in range(2):
+            Throttler(config)()
 
     def test_no_sleep(self):
         config = ThrottlerConfig(
@@ -48,4 +51,37 @@ class ThrottlerTest(unittest.TestCase):
             enable_sleep_wait=False,
             redis_client=redis_client,
         )
-        bulk_request(Throttler(config), bulk_params=[{} for _ in range(2)])
+        with self.assertRaises(TooManyRequests):
+            for _ in range(2):
+                Throttler(config)()
+
+    def test_max_request_time(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            max_retry_times=1,
+            redis_client=redis_client,
+        )
+        with self.assertRaises(TooManyRetries):
+            for _ in range(3):
+                Throttler(config)()
+
+    def test_max_retry_duration(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            max_retry_duration=0.01,
+            redis_client=redis_client,
+        )
+        with self.assertRaises(RetryTimeout):
+            for _ in range(3):
+                Throttler(config)()
+
+    def test_redis_error(self):
+        config = ThrottlerConfig(func=request_api, redis_client=fake_redis_client)
+        with self.assertRaises(ConnectionError):
+            Throttler(config)()
+
+    def test_clean(self):
+        config = ThrottlerConfig(func=request_api, redis_client=redis_client)
+        Throttler(config).reset()

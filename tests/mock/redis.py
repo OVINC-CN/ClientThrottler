@@ -32,3 +32,11 @@ redis_client = Redis(
     port=int(os.getenv("REDIS_PORT", 6379)),
     password=os.getenv("REDIS_PASSWORD"),
 )
+
+
+class FakeRedisClient(Redis):
+    def ping(self, **kwargs):
+        return False
+
+
+fake_redis_client = FakeRedisClient(host="127.0.0.2", socket_timeout=1)
