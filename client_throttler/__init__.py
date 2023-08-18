@@ -33,3 +33,5 @@ __all__ = [
     "Throttler",
     "ThrottlerConfig",
 ]
+
+__version__ = "1.0.3"

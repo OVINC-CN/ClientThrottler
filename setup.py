@@ -33,7 +33,7 @@ with open("requirements.txt") as f:
 
 setup(
     name="client_throttler",
-    version="1.0.2",
+    version="1.0.3",
     author="Raja",
     url="https://www.ovinc.cn",
     author_email="contact@ovinc.cn",
