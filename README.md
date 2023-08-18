@@ -1,7 +1,7 @@
 # Client Throttler
 
 [![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://github.com/OVINC-CN/ClientThrottler/blob/main/LICENSE)
-[![Release Version](https://img.shields.io/badge/release-1.0.1-brightgreen.svg)](https://github.com/OVINC-CN/ClientThrottler/releases)
+[![Release Version](https://img.shields.io/badge/release-1.0.2-brightgreen.svg)](https://github.com/OVINC-CN/ClientThrottler/releases)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/OVINC-CN/ClientThrottler/pulls)
 [![Unittest](https://github.com/OVINC-CN/ClientThrottler/actions/workflows/test.yml/badge.svg)](https://github.com/OVINC-CN/ClientThrottler/actions/workflows/test.yml)
 [![codecov](https://codecov.io/github/OVINC-CN/ClientThrottler/graph/badge.svg?token=X3M2H1E59O)](https://codecov.io/github/OVINC-CN/ClientThrottler)
