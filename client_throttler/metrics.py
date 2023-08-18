@@ -106,4 +106,6 @@ class MetricManager:
             keys = self.config.redis_client.keys(METRIC_KEY_FORMAT.format("*"))
         else:
             keys = [self.config.metric_key]
+        if not keys:
+            return
         self.config.redis_client.delete(*keys)
