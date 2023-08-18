@@ -34,7 +34,6 @@ CACHE_KEY_TIMEOUT = timedelta(hours=1)
 
 
 class Defaults:
-    rate = "100/s"
     enable_sleep_wait = True
     unit_value = 1
 

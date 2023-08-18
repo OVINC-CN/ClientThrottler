@@ -136,6 +136,5 @@ def setup(config: ThrottlerConfig):
 
 
 default_config = ThrottlerConfig(
-    rate=Defaults.rate,
     enable_sleep_wait=Defaults.enable_sleep_wait,
 )
