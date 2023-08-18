@@ -71,7 +71,6 @@ class Throttler:
             pipe.zcard(self.config.cache_key)
             pipe.expire(self.config.cache_key, CACHE_KEY_TIMEOUT)
             _, _, count, _ = pipe.execute(False)
-        self._record_metric(count)
         return count
 
     def get_wait_time(self, start_time: float, now: float, tag: str) -> float:
@@ -121,6 +120,7 @@ class Throttler:
         if count > self.config.max_requests:
             return self.get_wait_time(start_time, now, tag)
         else:
+            self.record_metric(count)
             self.update_time(tag)
             return 0
 
@@ -174,7 +174,7 @@ class Throttler:
             return
         raise ConnectionError()
 
-    def _record_metric(self, count: int) -> None:
+    def record_metric(self, count: int) -> None:
         """
         Record metric
         """
