@@ -30,7 +30,11 @@ from dataclasses import dataclass
 from typing import List
 
 from client_throttler.configs import ThrottlerConfig, default_config
-from client_throttler.constants import DATETIME_FORMAT, METRIC_KEY_FORMAT
+from client_throttler.constants import (
+    CACHE_KEY_TIMEOUT,
+    DATETIME_FORMAT,
+    METRIC_KEY_FORMAT,
+)
 
 
 @dataclass
@@ -53,11 +57,24 @@ class MetricManager:
     Manage metric
     """
 
-    def __init__(self, config: ThrottlerConfig = None):
+    def __init__(
+        self,
+        config: ThrottlerConfig = None,
+        start_time: float = None,
+        end_time: float = None,
+    ):
+        """
+        :param config: ThrottlerConfig, if not set, default_config will be used
+        :param start_time: timestamp(ms) of start time
+        :param end_time: timestamp(ms) of end time
+        """
         self._load_all = config is None
         self.config = config or default_config
         self.config.mix_config()
-        self.metrics = self.load_metrics()
+        self.end_time = math.ceil(end_time or time.time())
+        self.start_time = math.floor(
+            start_time or (self.end_time - CACHE_KEY_TIMEOUT.seconds)
+        )
 
     def load_metrics(self) -> List[MetricData]:
         if self._load_all:
@@ -75,7 +92,7 @@ class MetricManager:
 
     def load_exact_metric(self, key: str) -> List[MetricData]:
         data = self.config.redis_client.zrange(
-            key, 0, math.ceil(time.time()), withscores=True
+            key, self.start_time, self.end_time, withscores=True
         )
         return self.format_metric(key, data)
 

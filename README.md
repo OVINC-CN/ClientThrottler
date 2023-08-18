@@ -81,7 +81,7 @@ $ pip install client_throttler
     call your func
     """
     
-    metrics = MetricManager(config).metrics
+    metrics = MetricManager(config).load_metrics()
     ```
 
 ## License

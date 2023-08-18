@@ -25,8 +25,8 @@ SOFTWARE.
 
 from client_throttler.configs import ThrottlerConfig, setup
 from client_throttler.decorators import throttler
-from client_throttler.throttler import Throttler
 from client_throttler.metrics import MetricManager
+from client_throttler.throttler import Throttler
 
 __all__ = [
     "setup",
