@@ -55,6 +55,7 @@ class ThrottlerConfig:
     :param redis_client: Redis Client
     :param func: function that needs throttle, no need when using decorator
     :param enable_metric_record: Whether to record request count in time series
+    :param release_after_exec: Release after executing the function (similar to thread pool mode)
     """
 
     rate: str = Unset()
