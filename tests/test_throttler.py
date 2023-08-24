@@ -77,6 +77,16 @@ class ThrottlerTest(unittest.TestCase):
             for _ in range(3):
                 Throttler(config)()
 
+    def test_release_after_exec(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            redis_client=redis_client,
+            release_after_exec=True,
+        )
+        for _ in range(2):
+            Throttler(config)()
+
     def test_redis_error(self):
         config = ThrottlerConfig(func=request_api, redis_client=fake_redis_client)
         with self.assertRaises(ConnectionError):
