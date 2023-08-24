@@ -66,6 +66,7 @@ class ThrottlerConfig:
     redis_client: Redis = Unset()
     func: callable = Unset()
     enable_metric_record: bool = Unset()
+    release_after_exec: bool = Unset()
 
     @cached_property
     def cache_key(self) -> str:
