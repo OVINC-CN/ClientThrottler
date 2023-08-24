@@ -121,7 +121,6 @@ class Throttler:
             return self.get_wait_time(start_time, now, tag)
         else:
             self.record_metric(count)
-            self.update_time(tag)
             return 0
 
     def check_retry_times(self, tag: str, retry_times: int) -> None:
@@ -196,4 +195,11 @@ class Throttler:
     def __call__(self, *args, **kwargs) -> any:
         tag = str(uuid.uuid1())
         self.wait(tag)
-        return self.config.func(*args, **kwargs)
+        if not self.config.release_after_exec:
+            self.update_time(tag)
+            return self.config.func(*args, **kwargs)
+        try:
+            result = self.config.func(*args, **kwargs)
+        finally:
+            self.update_time(tag)
+        return result
