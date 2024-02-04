@@ -25,7 +25,9 @@ SOFTWARE.
 
 import time
 import uuid
+from typing import Callable, Union
 
+from redis import Redis
 from redis.exceptions import ConnectionError
 
 from client_throttler.configs import ThrottlerConfig, default_config
@@ -61,16 +63,21 @@ class Throttler:
         4. Set the expiration time for the large key to prevent cold data from occupying space
         """
 
-        with self.config.redis_client.pipeline(transaction=False) as pipe:
-            pipe.zremrangebyscore(
-                self.config.cache_key,
-                0,
-                start_time - TimeDurationUnit.MILLISECOND.value,
-            )
-            pipe.zadd(self.config.cache_key, {tag: now + TimeDurationUnit.YEAR.value})
-            pipe.zcard(self.config.cache_key)
-            pipe.expire(self.config.cache_key, CACHE_KEY_TIMEOUT)
-            _, _, count, _ = pipe.execute(False)
+        def _get_request_count(client: Redis) -> list:
+            return [
+                client.zremrangebyscore(
+                    self.config.cache_key,
+                    0,
+                    start_time - TimeDurationUnit.MILLISECOND.value,
+                ),
+                client.zadd(
+                    self.config.cache_key, {tag: now + TimeDurationUnit.YEAR.value}
+                ),
+                client.zcard(self.config.cache_key),
+                client.expire(self.config.cache_key, CACHE_KEY_TIMEOUT),
+            ]
+
+        _, _, count, _ = self.execute(_get_request_count)
         return count
 
     def get_wait_time(self, start_time: float, now: float, tag: str) -> float:
@@ -85,12 +92,20 @@ class Throttler:
         # If rate-limited, remove the inserted record and calculate the next request time
         # based on the time of the first request in the current interval.
 
-        with self.config.redis_client.pipeline(transaction=False) as pipe:
-            pipe.zrem(self.config.cache_key, tag)
-            pipe.zrangebyscore(
-                self.config.cache_key, start_time, now, start=0, num=1, withscores=True
-            )
-            _, result = pipe.execute()
+        def _get_wait_time(client: Redis) -> list:
+            return [
+                client.zrem(self.config.cache_key, tag),
+                client.zrangebyscore(
+                    self.config.cache_key,
+                    start_time,
+                    now,
+                    start=0,
+                    num=1,
+                    withscores=True,
+                ),
+            ]
+
+        _, result = self.execute(_get_wait_time)
         if not result:
             return self.config.interval / 2
         _, last_time = result[0]
@@ -183,15 +198,33 @@ class Throttler:
             return
 
         now = time.time()
-        with self.config.redis_client.pipeline(transaction=False) as pipe:
-            pipe.zremrangebyscore(
+
+        def _record_metric(client: Redis) -> None:
+            client.zremrangebyscore(
                 self.config.metric_key,
                 0,
                 now - CACHE_KEY_TIMEOUT.seconds,
             )
-            pipe.zadd(self.config.metric_key, {f"{count}:{uuid.uuid1()}": time.time()})
-            pipe.expire(self.config.metric_key, CACHE_KEY_TIMEOUT)
-            pipe.execute(raise_on_error=False)
+            client.zadd(
+                self.config.metric_key, {f"{count}:{uuid.uuid1()}": time.time()}
+            )
+            client.expire(self.config.metric_key, CACHE_KEY_TIMEOUT)
+
+        self.execute(_record_metric)
+
+    def execute(
+        self, function: Callable[[Redis], Union[list, None]]
+    ) -> Union[list, None]:
+        """
+        execute redis command
+        """
+
+        if self.config.enable_pipeline:
+            with self.config.redis_client.pipeline(transaction=False) as pipe:
+                function(pipe)
+                return pipe.execute(raise_on_error=False)
+        else:
+            return function(self.config.redis_client)
 
     def __call__(self, *args, **kwargs) -> any:
         tag = str(uuid.uuid1())
