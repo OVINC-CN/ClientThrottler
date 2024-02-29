@@ -56,5 +56,6 @@ class MetricsTest(unittest.TestCase):
         setup(config)
         Throttler(config)()
         manager = MetricManager()
+        manager.load_metrics()
         manager.reset()
         manager.reset()

@@ -25,12 +25,14 @@ SOFTWARE.
 
 import time
 import uuid
+from typing import Union
 
-from redis.exceptions import ConnectionError
+from redis.client import Pipeline
 
 from client_throttler.configs import ThrottlerConfig, default_config
 from client_throttler.constants import CACHE_KEY_TIMEOUT, TimeDurationUnit
 from client_throttler.exceptions import RetryTimeout, TooManyRequests, TooManyRetries
+from client_throttler.redis import MockPipeline
 
 
 class Throttler:
@@ -44,7 +46,6 @@ class Throttler:
     def __init__(self, config: ThrottlerConfig = None):
         self.config = config or default_config
         self.config.mix_config()
-        self._check_redis()
 
     def get_request_count(self, start_time: float, tag: str, now: float) -> int:
         """
@@ -61,7 +62,7 @@ class Throttler:
         4. Set the expiration time for the large key to prevent cold data from occupying space
         """
 
-        with self.config.redis_client.pipeline(transaction=False) as pipe:
+        with self._get_pipline() as pipe:
             pipe.zremrangebyscore(
                 self.config.cache_key,
                 0,
@@ -70,7 +71,7 @@ class Throttler:
             pipe.zadd(self.config.cache_key, {tag: now + TimeDurationUnit.YEAR.value})
             pipe.zcard(self.config.cache_key)
             pipe.expire(self.config.cache_key, CACHE_KEY_TIMEOUT)
-            _, _, count, _ = pipe.execute(False)
+            _, _, count, _ = pipe.execute()
         return count
 
     def get_wait_time(self, start_time: float, now: float, tag: str) -> float:
@@ -85,7 +86,7 @@ class Throttler:
         # If rate-limited, remove the inserted record and calculate the next request time
         # based on the time of the first request in the current interval.
 
-        with self.config.redis_client.pipeline(transaction=False) as pipe:
+        with self._get_pipline() as pipe:
             pipe.zrem(self.config.cache_key, tag)
             pipe.zrangebyscore(
                 self.config.cache_key, start_time, now, start=0, num=1, withscores=True
@@ -165,15 +166,6 @@ class Throttler:
 
         self.config.redis_client.delete(self.config.cache_key)
 
-    def _check_redis(self) -> None:
-        """
-        Check redis
-        """
-
-        if self.config.redis_client.ping():
-            return
-        raise ConnectionError()
-
     def record_metric(self, count: int) -> None:
         """
         Record metric
@@ -183,7 +175,7 @@ class Throttler:
             return
 
         now = time.time()
-        with self.config.redis_client.pipeline(transaction=False) as pipe:
+        with self._get_pipline() as pipe:
             pipe.zremrangebyscore(
                 self.config.metric_key,
                 0,
@@ -191,7 +183,12 @@ class Throttler:
             )
             pipe.zadd(self.config.metric_key, {f"{count}:{uuid.uuid1()}": time.time()})
             pipe.expire(self.config.metric_key, CACHE_KEY_TIMEOUT)
-            pipe.execute(raise_on_error=False)
+            pipe.execute()
+
+    def _get_pipline(self) -> Union[MockPipeline, Pipeline]:
+        if self.config.enable_pipeline:
+            return self.config.redis_client.pipeline(transaction=False)
+        return MockPipeline(self.config.redis_client)
 
     def __call__(self, *args, **kwargs) -> any:
         tag = str(uuid.uuid1())

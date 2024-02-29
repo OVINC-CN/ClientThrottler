@@ -91,7 +91,7 @@ class MetricManager:
         return metrics
 
     def load_exact_metric(self, key: str) -> List[MetricData]:
-        data = self.config.redis_client.zrange(
+        data = self.config.redis_client.zrangebyscore(
             key, self.start_time, self.end_time, withscores=True
         )
         return self.format_metric(key, data)

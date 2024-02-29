@@ -77,11 +77,64 @@ class ThrottlerTest(unittest.TestCase):
             for _ in range(3):
                 Throttler(config)()
 
-    def test_redis_error(self):
-        config = ThrottlerConfig(func=request_api, redis_client=fake_redis_client)
-        with self.assertRaises(ConnectionError):
-            Throttler(config)()
-
     def test_clean(self):
         config = ThrottlerConfig(func=request_api, redis_client=redis_client)
         Throttler(config).reset()
+
+    def test_sleep_without_pipeline(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            enable_sleep_wait=True,
+            redis_client=redis_client,
+            enable_pipeline=False,
+        )
+        for _ in range(2):
+            Throttler(config)()
+
+    def test_error_without_pipeline(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            enable_sleep_wait=True,
+            redis_client=fake_redis_client,
+            enable_pipeline=False,
+        )
+        with self.assertRaises(ConnectionError):
+            Throttler(config)()
+
+    def test_no_sleep_without_pipeline(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            enable_sleep_wait=False,
+            redis_client=redis_client,
+            enable_pipeline=False,
+        )
+        with self.assertRaises(TooManyRequests):
+            for _ in range(2):
+                Throttler(config)()
+
+    def test_max_request_time_without_pipeline(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            max_retry_times=1,
+            redis_client=redis_client,
+            enable_pipeline=False,
+        )
+        with self.assertRaises(TooManyRetries):
+            for _ in range(3):
+                Throttler(config)()
+
+    def test_max_retry_duration_without_pipeline(self):
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="1/50ms",
+            max_retry_duration=0.01,
+            redis_client=redis_client,
+            enable_pipeline=False,
+        )
+        with self.assertRaises(RetryTimeout):
+            for _ in range(3):
+                Throttler(config)()
