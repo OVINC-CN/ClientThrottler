@@ -67,7 +67,7 @@ class ThrottlerConfig:
     redis_client: Redis = Unset()
     func: callable = Unset()
     enable_metric_record: bool = Unset()
-    enable_pipeline: bool = True
+    enable_pipeline: bool = Unset()
 
     @cached_property
     def cache_key(self) -> str:
@@ -149,4 +149,5 @@ def setup(config: ThrottlerConfig):
 default_config = ThrottlerConfig(
     enable_sleep_wait=Defaults.enable_sleep_wait,
     enable_metric_record=Defaults.enable_metric_record,
+    enable_pipeline=True,
 )
