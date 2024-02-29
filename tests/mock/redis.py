@@ -26,6 +26,7 @@ SOFTWARE.
 import os
 
 from redis.client import Redis
+from redis.exceptions import ConnectionError
 
 redis_client = Redis(
     host=os.getenv("REDIS_HOST", "127.0.0.1"),
@@ -35,8 +36,8 @@ redis_client = Redis(
 
 
 class FakeRedisClient(Redis):
-    def ping(self, **kwargs):
-        return False
+    def zremrangebyscore(self, *args, **kwargs):
+        raise ConnectionError
 
 
 fake_redis_client = FakeRedisClient(host="127.0.0.2", socket_timeout=1)

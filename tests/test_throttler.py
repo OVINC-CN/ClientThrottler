@@ -25,7 +25,7 @@ SOFTWARE.
 
 import unittest
 
-from redis.exceptions import TimeoutError
+from redis.exceptions import ConnectionError
 
 from client_throttler import Throttler, ThrottlerConfig
 from client_throttler.exceptions import RetryTimeout, TooManyRequests, TooManyRetries
@@ -100,7 +100,7 @@ class ThrottlerTest(unittest.TestCase):
             redis_client=fake_redis_client,
             enable_pipeline=False,
         )
-        with self.assertRaises(TimeoutError):
+        with self.assertRaises(ConnectionError):
             Throttler(config)()
 
     def test_no_sleep_without_pipeline(self):
