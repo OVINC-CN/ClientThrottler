@@ -28,39 +28,54 @@ from redis import Redis
 
 class MockPipeline:
     def __init__(self, client: Redis):
-        self.client = client
-        self.results = []
+        self._client = client
+        self._commands = []
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args, **kwargs):
-        self.clear()
+        return
+
+    def __getattr__(self, func_name):
+        return MockCommand(pipeline=self, func_name=func_name)
+
+    def _reset(self):
+        self._commands = []
 
     def execute(self, raise_on_error: bool = True) -> list:
-        if raise_on_error:
-            for result in self.results:
-                if isinstance(result, Exception):
-                    raise result
-        results = self.results
-        self.clear()
+        results = []
+        for command in self._commands:
+            try:
+                result = command.execute()
+            except Exception as err:
+                result = err
+                if raise_on_error:
+                    self._reset()
+                    raise err
+            results.append(result)
+        self._reset()
         return results
 
-    def clear(self):
-        self.results = []
+    def add_command(self, func: "MockCommand") -> None:
+        self._commands.append(func)
 
-    def __getattr__(self, item):
-        return MockFunc(pipeline=self, item=item)
+    def redis_func(self, func_name: str) -> callable:
+        return getattr(self._client, func_name)
 
 
-class MockFunc:
-    def __init__(self, pipeline: MockPipeline, item: str):
+class MockCommand:
+    def __init__(self, pipeline: MockPipeline, func_name: str):
         self.pipeline = pipeline
-        self.func = getattr(pipeline.client, item)
+        self.func = self.pipeline.redis_func(func_name)
+        self.args = tuple()
+        self.kwargs = dict()
 
-    def __call__(self, *args, **kwargs):
-        try:
-            result = self.func(*args, **kwargs)
-        except Exception as e:
-            result = e
-        self.pipeline.results.append(result)
+    def __call__(self, *args, **kwargs) -> "MockCommand":
+        self.args = args
+        self.kwargs = kwargs
+        self.pipeline.add_command(self)
+        return self
+
+    def execute(self) -> any:
+        return self.func(*self.args, **self.kwargs)
