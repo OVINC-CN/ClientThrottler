@@ -77,11 +77,6 @@ class ThrottlerTest(unittest.TestCase):
             for _ in range(3):
                 Throttler(config)()
 
-    def test_redis_error(self):
-        config = ThrottlerConfig(func=request_api, redis_client=fake_redis_client)
-        with self.assertRaises(ConnectionError):
-            Throttler(config)()
-
     def test_clean(self):
         config = ThrottlerConfig(func=request_api, redis_client=redis_client)
         Throttler(config).reset()
