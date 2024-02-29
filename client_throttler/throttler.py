@@ -63,7 +63,6 @@ class Throttler:
         """
 
         with self._get_pipline() as pipe:
-            print(pipe)
             pipe.zremrangebyscore(
                 self.config.cache_key,
                 0,
@@ -72,7 +71,7 @@ class Throttler:
             pipe.zadd(self.config.cache_key, {tag: now + TimeDurationUnit.YEAR.value})
             pipe.zcard(self.config.cache_key)
             pipe.expire(self.config.cache_key, CACHE_KEY_TIMEOUT)
-            _, _, count, _ = pipe.execute(False)
+            _, _, count, _ = pipe.execute()
         return count
 
     def get_wait_time(self, start_time: float, now: float, tag: str) -> float:
@@ -184,7 +183,7 @@ class Throttler:
             )
             pipe.zadd(self.config.metric_key, {f"{count}:{uuid.uuid1()}": time.time()})
             pipe.expire(self.config.metric_key, CACHE_KEY_TIMEOUT)
-            pipe.execute(raise_on_error=False)
+            pipe.execute()
 
     def _get_pipline(self) -> Union[MockPipeline, Pipeline]:
         if self.config.enable_pipeline:
