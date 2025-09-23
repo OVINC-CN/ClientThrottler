@@ -28,12 +28,83 @@ import unittest
 from redis.exceptions import ConnectionError
 
 from client_throttler import Throttler, ThrottlerConfig
+from client_throttler.constants import TimeDurationUnit
 from client_throttler.exceptions import RetryTimeout, TooManyRequests, TooManyRetries
 from tests.mock.api import request_api
 from tests.mock.redis import fake_redis_client, redis_client
 
 
 class ThrottlerTest(unittest.TestCase):
+    class _InMemoryRedisClient:
+        def __init__(self):
+            self._sorted_sets = {}
+
+        def _get_zset(self, key):
+            return self._sorted_sets.setdefault(key, {})
+
+        def ping(self, **kwargs):
+            return True
+
+        def zremrangebyscore(self, key, min_score, max_score):
+            zset = self._sorted_sets.get(key, {})
+            to_delete = [
+                member
+                for member, score in zset.items()
+                if min_score <= score <= max_score
+            ]
+            for member in to_delete:
+                zset.pop(member, None)
+            return len(to_delete)
+
+        def zadd(self, key, mapping):
+            zset = self._get_zset(key)
+            added = 0
+            for member, score in mapping.items():
+                if member not in zset:
+                    added += 1
+                zset[member] = score
+            return added
+
+        def zcard(self, key):
+            return len(self._sorted_sets.get(key, {}))
+
+        def expire(self, key, timeout):
+            return True
+
+        def zrem(self, key, member):
+            zset = self._sorted_sets.get(key, {})
+            return int(zset.pop(member, None) is not None)
+
+        def zrangebyscore(
+            self,
+            key,
+            min_score,
+            max_score,
+            start=0,
+            num=None,
+            withscores=False,
+        ):
+            zset = self._sorted_sets.get(key, {})
+            items = [
+                (member, score)
+                for member, score in zset.items()
+                if min_score <= score <= max_score
+            ]
+            items.sort(key=lambda item: item[1])
+            if start:
+                items = items[start:]
+            if num is not None:
+                items = items[:num]
+            if withscores:
+                return items
+            return [member for member, _ in items]
+
+        def delete(self, key):
+            return int(self._sorted_sets.pop(key, None) is not None)
+
+        def get_members(self, key):
+            return dict(self._sorted_sets.get(key, {}))
+
     def test_sleep(self):
         config = ThrottlerConfig(
             func=request_api,
@@ -138,3 +209,31 @@ class ThrottlerTest(unittest.TestCase):
         with self.assertRaises(RetryTimeout):
             for _ in range(3):
                 Throttler(config)()
+
+    def test_placeholder_auto_cleanup_without_manual_update(self):
+        redis_client = self._InMemoryRedisClient()
+        config = ThrottlerConfig(
+            func=request_api,
+            rate="2/2s",
+            redis_client=redis_client,
+            enable_pipeline=False,
+            placeholder_offset=TimeDurationUnit.MINUTE.value,
+        )
+        throttler = Throttler(config)
+
+        first_tag = "first-placeholder"
+        now = 1000.0
+        start_time = now - throttler.config.interval
+        self.assertEqual(1, throttler.get_request_count(start_time, first_tag, now))
+
+        future_now = (
+            now
+            + throttler.config.interval
+            + throttler.config.placeholder_offset
+            + TimeDurationUnit.MILLISECOND.value
+        )
+        future_start = future_now - throttler.config.interval
+        throttler.get_request_count(future_start, "second-placeholder", future_now)
+
+        members = throttler.config.redis_client.get_members(throttler.config.cache_key)
+        self.assertNotIn(first_tag, members)

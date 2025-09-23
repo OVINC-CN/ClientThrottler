@@ -35,12 +35,6 @@ METRIC_KEY_FORMAT = "client_throttler_metric:{}"
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 
-class Defaults:
-    enable_sleep_wait = True
-    enable_metric_record = False
-    unit_value = 1
-
-
 class TimeDurationUnit(Enum):
     """
     Time Duration in Second
@@ -83,3 +77,10 @@ class Unset:
 
     def __str__(self):
         return ""
+
+
+class Defaults:
+    enable_sleep_wait = True
+    enable_metric_record = False
+    unit_value = 1
+    placeholder_offset = TimeDurationUnit.YEAR.value
