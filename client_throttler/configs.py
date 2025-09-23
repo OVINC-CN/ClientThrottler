@@ -56,6 +56,7 @@ class ThrottlerConfig:
     :param func: function that needs throttle, no need when using decorator
     :param enable_metric_record: Whether to record request count in time series
     :param enable_pipeline: Whether to enable pipeline
+    :param placeholder_offset: Buffer seconds keeping request placeholder before auto cleanup
     """
 
     rate: str = Unset()
@@ -68,6 +69,7 @@ class ThrottlerConfig:
     func: callable = Unset()
     enable_metric_record: bool = Unset()
     enable_pipeline: bool = Unset()
+    placeholder_offset: float = Unset()
 
     @cached_property
     def cache_key(self) -> str:
@@ -150,4 +152,5 @@ default_config = ThrottlerConfig(
     enable_sleep_wait=Defaults.enable_sleep_wait,
     enable_metric_record=Defaults.enable_metric_record,
     enable_pipeline=True,
+    placeholder_offset=Defaults.placeholder_offset,
 )
