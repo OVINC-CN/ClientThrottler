@@ -68,7 +68,10 @@ class Throttler:
                 0,
                 start_time - TimeDurationUnit.MILLISECOND.value,
             )
-            pipe.zadd(self.config.cache_key, {tag: now + TimeDurationUnit.YEAR.value})
+            pipe.zadd(
+                self.config.cache_key,
+                {tag: now + self.config.placeholder_offset},
+            )
             pipe.zcard(self.config.cache_key)
             pipe.expire(self.config.cache_key, CACHE_KEY_TIMEOUT)
             _, _, count, _ = pipe.execute()
