@@ -23,21 +23,111 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import os
+from fnmatch import fnmatch
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from redis.client import Redis
 from redis.exceptions import ConnectionError
 
-redis_client = Redis(
-    host=os.getenv("REDIS_HOST", "127.0.0.1"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
-    password=os.getenv("REDIS_PASSWORD"),
-)
+from client_throttler.redis import MockPipeline
 
 
-class FakeRedisClient(Redis):
-    def zremrangebyscore(self, *args, **kwargs):
-        raise ConnectionError
+class InMemoryRedisClient:
+    def __init__(self) -> None:
+        self._sorted_sets: Dict[str, Dict[str, float]] = {}
+
+    def _decode(self, value: Any) -> Any:
+        if isinstance(value, bytes):
+            return value.decode()
+        return value
+
+    def _get_zset(self, key: Union[str, bytes]) -> Dict[str, float]:
+        return self._sorted_sets.setdefault(self._decode(key), {})
+
+    def ping(self, **kwargs: Any) -> bool:
+        return True
+
+    def pipeline(self, transaction: bool = False) -> MockPipeline:
+        return MockPipeline(self)
+
+    def zremrangebyscore(
+        self, key: Union[str, bytes], min_score: float, max_score: float
+    ) -> int:
+        zset = self._sorted_sets.get(self._decode(key), {})
+        to_delete = [
+            member for member, score in zset.items() if min_score <= score <= max_score
+        ]
+        for member in to_delete:
+            zset.pop(member, None)
+        return len(to_delete)
+
+    def zadd(
+        self, key: Union[str, bytes], mapping: Dict[Union[str, bytes], float]
+    ) -> int:
+        zset = self._get_zset(key)
+        added = 0
+        for member, score in mapping.items():
+            member = self._decode(member)
+            if member not in zset:
+                added += 1
+            zset[member] = score
+        return added
+
+    def zcard(self, key: Union[str, bytes]) -> int:
+        return len(self._sorted_sets.get(self._decode(key), {}))
+
+    def expire(self, key: Union[str, bytes], timeout: Any) -> bool:
+        return True
+
+    def zrem(self, key: Union[str, bytes], member: Union[str, bytes]) -> int:
+        zset = self._sorted_sets.get(self._decode(key), {})
+        return int(zset.pop(self._decode(member), None) is not None)
+
+    def zrangebyscore(
+        self,
+        key: Union[str, bytes],
+        min_score: float,
+        max_score: float,
+        start: int = 0,
+        num: Optional[int] = None,
+        withscores: bool = False,
+    ) -> Union[List[bytes], List[Tuple[bytes, float]]]:
+        zset = self._sorted_sets.get(self._decode(key), {})
+        items = [
+            (member, score)
+            for member, score in zset.items()
+            if min_score <= score <= max_score
+        ]
+        items.sort(key=lambda item: item[1])
+        if start:
+            items = items[start:]
+        if num is not None:
+            items = items[:num]
+        if withscores:
+            return [(member.encode(), score) for member, score in items]
+        return [member.encode() for member, _ in items]
+
+    def delete(self, *keys: Union[str, bytes]) -> int:
+        deleted = 0
+        for key in keys:
+            deleted += int(self._sorted_sets.pop(self._decode(key), None) is not None)
+        return deleted
+
+    def keys(self, pattern: Union[str, bytes]) -> List[bytes]:
+        pattern = self._decode(pattern)
+        return [
+            key.encode() for key in self._sorted_sets.keys() if fnmatch(key, pattern)
+        ]
 
 
-fake_redis_client = FakeRedisClient(host="127.0.0.2", socket_timeout=1)
+redis_client = InMemoryRedisClient()
+
+
+class FakeRedisClient:
+    def __getattr__(self, name):
+        def _raise_connection_error(*args, **kwargs):
+            raise ConnectionError
+
+        return _raise_connection_error
+
+
+fake_redis_client = FakeRedisClient()

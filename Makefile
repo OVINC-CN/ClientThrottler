@@ -12,3 +12,5 @@ dev:
 	python -m pip install --upgrade pip
 	pip install -r requirements.txt
 	pip install -r requirements_dev.txt
+test:
+	python -m pytest
